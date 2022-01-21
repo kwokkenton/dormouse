@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jan 20 16:19:20 2022
+
+@author: go34660
+"""
+import meep as mp
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+
+#%%
+s = 11
+resolution = 10
+cell = mp.Vector3(s,s,s)
+geometry = [mp.Block(mp.Vector3(3,5,3),
+                    center=mp.Vector3(0,5,0),
+                    material=mp.Medium(epsilon=12))]
+
+
+
+
+beam_x0 = mp.Vector3(0,5,0)
+rot_angle = np.pi*0.64
+beam_kdir = mp.Vector3(0,1,0).rotate(mp.Vector3(1,0,0),rot_angle)
+beam_w0 = 0.8
+beam_E0 = mp.Vector3(0,0,1)
+fcen = 1
+#%%
+sources = [mp.GaussianBeamSource(src = mp.ContinuousSource(fcen),
+                                 center=mp.Vector3(0,0,0),
+                                 size = mp.Vector3(0,1,1),
+                                 beam_x0 = beam_x0,
+                                 beam_kdir = beam_kdir,
+                                 beam_w0 = beam_w0,
+                                 beam_E0 = beam_E0,
+                                 #amplitude=1j
+                                 )]
+#pml_layers = [mp.PML(1.0)]
+
+sim = mp.Simulation(cell_size=cell,
+                    #boundary_layers=pml_layers,
+                    #geometry=geometry,
+                    sources=sources,
+                    resolution=resolution,
+                    force_all_components=True
+                    )
+sim.run(until=200)
+#%%
+plt.figure()
+sim.plot2D(fields=mp.Ez,output_plane=mp.Volume(center=mp.Vector3(0,0,0),size=mp.Vector3(s-2*1,0,s-2*1)))
+#%%
+mp.Volume(center=mp.Vector3(), size=mp.Vector3(s,0,s))
+#%%
+#plt.savefig('test{}.png'.format(int(rot_angle)),bbox_inches='tight',pad_inches=0)
+plt.figure()
+eps_data = sim.get_array(center=mp.Vector3(0,0,0), size=mp.Vector3(s,s,s), component=mp.Dielectric)
+plt.imshow(eps_data.transpose(), interpolation='spline36', cmap='binary')
+plt.axis('off')
+plt.show()
+#%%
+ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
+plt.figure()
+plt.imshow(eps_data.transpose(), interpolation='spline36', cmap='binary')
+plt.imshow(ez_data.transpose(), interpolation='spline36', cmap='RdBu', alpha=0.9)
+plt.axis('off')
+plt.show()
+#%%
+cell = mp.Vector3(4,4,4)
+vertices = [mp.Vector3(0,0),mp.Vector3(1,0),mp.Vector3(0,1),mp.Vector3(1,1)]
+geometry = [mp.Prism(vertices,center=mp.Vector3(),material='cSi')]
+#%%
+sources = [mp.Source(mp.ContinuousSource(frequency=0.15),component = mp.Ez,center=mp.Vector3(-7,0,0))]
+sim = mp.Simulation(cell_size = cell,geometry=geometry,sources=sources,resolution=30)
+#%%
+ezdat = sim.get_array(center=mp.Vector3(),size=cell,component=mp.Ez)
