@@ -7,14 +7,13 @@ import matplotlib.pyplot as plt
 grid = np.mgrid[0:5, 0:5]
 
 def phase_func(x):
-    return 1
-    return 2*np.pi*x**2
+    return 2*np.pi*x@x
 
 def psi(r1,t):
     """ Calculates the field at coordinate r1 at time t
 
     Args:
-        r1 (np.array): [description]
+        r1 (np.array): position where you want to measure
         t1 (float): [description]
     """
 
@@ -22,22 +21,23 @@ def psi(r1,t):
     c = 1 # wave speed
     delta_r = 0.01
 
-    def v(r2,t):
+    def v(r2, t):
         return np.cos((w*t+ phase_func(r2)))
     
     integral = 0
-    # Integrate over space
+    # Integrate over flat transducer
     for r2 in np.arange(-1,1,delta_r):
+        r2 = np.array([r2, 0]) # At z = 0
         dist = np.linalg.norm((r1-r2))
+        
         t_ret = dist/c
-        if t - t_ret < 0:
-            continue
-        else:
-            integral += v(r2, t-t_ret)/ (2 * np.pi * dist) * delta_r
+
+        integral += (v(r2, t-t_ret)/ (2 * np.pi * dist) * delta_r 
+                * np.heaviside(t-t_ret, 1))
     
     return integral
 
-r1 = 2
-##plt.plot(psi(r1,20))
-#plt.show()
-print(psi([1,2,3],22))
+if __name__ == '__main__':
+    #psi = np.vectorize(psi)
+    print(psi(np.array([5,0]),5.5))
+    
