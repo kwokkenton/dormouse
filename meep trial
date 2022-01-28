@@ -11,36 +11,65 @@ import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
 #%%
-resolution = 25 #resolution per unit length
-cell = mp.Vector3(8,20) #cell size
+resolution = 30 #resolution per unit length
+cell = mp.Vector3(25,10) #cell size
 pml_layers = [mp.PML(1.0,direction=mp.Y)] #absorbing layers the waves go around (periodic boundary conditions)
-theta = np.pi/3 #rotation angle
+theta = np.pi*43/180 #rotation angle
 
-k = mp.Vector3(0,1,0) #k vector which decides the dicrection the wave travels in
+freq = 1
+
+k = mp.Vector3(0,1,0).rotate(mp.Vector3(0,0,1),theta) * 1.52 #k vector which decides the dicrection the wave travels in
 
 def ampfunc(v3): #amplitude function used to for straight wave propagation
-    return np.exp(1j*(k*v3)) 
+    return np.exp(2*np.pi*1j*(k*v3)) 
 
-geometry = [mp.Block(mp.Vector3(mp.inf,2,mp.inf), #infinite block
-                     e1 = mp.Vector3(np.cos(theta),np.sin(theta)), #decides 2 axis which the block is rotated in
-                     e2 = mp.Vector3(-np.sin(theta),np.cos(theta)),
-                     center = mp.Vector3(0,10), #center should be high
-                     material = mp.Medium(epsilon = 2.31) #glass
-                    )]
-sources = [mp.Source(mp.ContinuousSource(frequency=0.633), #0.633 = 633nm?
+geometry = [mp.Block(mp.Vector3(mp.inf,4,mp.inf), #infinite block
+                     #e1 = mp.Vector3(np.cos(theta),np.sin(theta)), #decides 2 axis which the block is rotated in
+                     #e2 = mp.Vector3(-np.sin(theta),np.cos(theta)),
+                     center = mp.Vector3(0,0), #center should be high
+                     material = mp.Medium(epsilon=2.31) #glass
+                    ),
+            mp.Block(mp.Vector3(mp.inf,0.01,mp.inf),
+                     center = mp.Vector3(0,-2.2),
+                     material = mp.Medium(epsilon = 12))]
+
+sources = [mp.Source(mp.ContinuousSource(frequency=freq), #0.633 = 633nm?
                     component=mp.Ez, #in ez direction not really sure what polarization has on these stuff
-                    size = mp.Vector3(8,0), #needs to encompass the whole cell for it to be straight
-                    center=mp.Vector3(0,-6), #just put it right around the bottom limit
+                    size = mp.Vector3(25,0), #needs to encompass the whole cell for it to be straight
+                    center=mp.Vector3(0,0), #just put it right around the bottom limit
                     amp_func = ampfunc #amp function
                     )]
 
 sim = mp.Simulation(cell_size=cell,
     	            boundary_layers=pml_layers,
-                    #geometry=geometry, #the geometry doesn't really work for now? Not really sure how
+                    geometry=geometry, #the geometry doesn't really work for now? Not really sure how
                     sources=sources, 
                     resolution=resolution,
                     k_point = k #need to define this
-                    #default_material = mp.Medium('air') #this doesn't really work
+                    #default_material = mp.air #this doesn't really work
                     )
+
+
 #%%
-sim.run(mp.at_every(2, mp.output_png(mp.Ez, "-Zc dkbluered")),until=20) #saves jpeg files onto the working directory so be careful  
+sim.run(mp.at_every(2, mp.output_png(mp.Ez, "-Zc dkbluered")),until=100) #saves jpeg files onto the working directory so be careful  
+#%%
+eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
+plt.figure()
+plt.imshow(eps_data, interpolation='spline36', cmap='binary')
+#plt.axis('off')
+plt.show()
+
+#%%
+ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
+plt.figure()
+plt.imshow(np.real(ez_data).transpose(), interpolation='spline36', cmap='coolwarm', alpha=0.8)
+#plt.axis('off')
+plt.show()
+#%%
+data1 = ez_data[20]
+#%%
+plt.plot(range(len(ez_data[0])),ez_data[30]**2,label = 'with')
+plt.plot(range(len(ez_data[0])),data1**2,label = 'w/o')
+plt.legend()
+#plt.xlim(75,150)
+
