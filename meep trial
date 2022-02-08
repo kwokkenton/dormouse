@@ -12,6 +12,7 @@ from mpl_toolkits import mplot3d
 #%%
 """
 Current Tasks:
+    Something inbetween air and glass to prevent backscattering and stuff
     What angle will give the strongest evanescent field?
     how am i supposed to detect the material? Which direction, beyond the source out the other side?
     try different materials, how do i put in different metals 
