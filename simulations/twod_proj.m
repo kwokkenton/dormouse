@@ -72,16 +72,16 @@ source.p = toneBurst(sampling_freq, tone_burst_freq, tone_burst_cycles, ...
 
 % define the first line sensor region by specifying the location of
 % opposing corners
-rect1_x_start = 50;
-rect1_y_start = 50;
-rect1_x_end = 60;
-rect1_y_end = 60;
+rect1_x_start = 100;
+rect1_y_start = 1;
+rect1_x_end = 200;
+rect1_y_end = Ny;
 
 % assign the list of opposing corners to the sensor mask
 sensor.mask = [rect1_x_start, rect1_y_start, rect1_x_end, rect1_y_end].';
 
 % set the record mode to capture the final wave-field
-sensor.record = {'p_final'};
+sensor.record = {'p_max'};
 
 % assign the input options
 %input_args = { 'PMLInside', false, 'PlotPML', false};
@@ -114,8 +114,8 @@ sensor_data = kspaceFirstOrder2D(kgrid, medium, source, sensor, input_args{:});
 % VISUALISATION FOR THE FINAL PATTERN
 % plot the simulated sensor data
 figure;
-mx = max(abs(sensor_data.p_final(:)));
-imagesc(sensor_data.p_final, [-mx, mx]);
+mx = max(abs(sensor_data.p_max(:)));
+imagesc(sensor_data.p_max, [-mx, mx]);
 colormap(getColorMap);
 ylabel('Sensor Position');
 xlabel('Time Step');
