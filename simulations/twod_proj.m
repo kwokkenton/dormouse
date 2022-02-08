@@ -58,28 +58,65 @@ tone_burst_offset = 60 + element_spacing * element_index * ...
 source.p = toneBurst(sampling_freq, tone_burst_freq, tone_burst_cycles, ...
     'SignalOffset', tone_burst_offset);
 
-% assign the input options
-input_args = {'DisplayMask', source.p_mask};
-
-% run the simulation
-kspaceFirstOrder2D(kgrid, medium, source, [], input_args{:});
 
 % =========================================================================
 % DETECTION
 % =========================================================================
 
+% from example of Transducer field examples
+
+% create a sensor mask covering the entire computational domain using the
+% opposing corners of a rectangle
+% TODO change this into a line
+% check when the 
+
+% define the first line sensor region by specifying the location of
+% opposing corners
+rect1_x_start = 50;
+rect1_y_start = 50;
+rect1_x_end = 60;
+rect1_y_end = 60;
+
+% assign the list of opposing corners to the sensor mask
+sensor.mask = [rect1_x_start, rect1_y_start, rect1_x_end, rect1_y_end].';
+
+% set the record mode to capture the final wave-field
+sensor.record = {'p_final'};
+
+% assign the input options
+%input_args = { 'PMLInside', false, 'PlotPML', false};
+input_args = {'DisplayMask', source.p_mask};
+% run the simulation
+sensor_data = kspaceFirstOrder2D(kgrid, medium, source, sensor, input_args{:});
+
+% run the simulation
+%kspaceFirstOrder2D(kgrid, medium, source, [], input_args{:});
+
+
 % =========================================================================
 % VISUALISATION
 % =========================================================================
 
-% get the number of time points in the source signal
-num_source_time_points = length(source.p(1,:));
+% VISUALISATIONS FOR THE DELAYS
 
-% get suitable scaling factor for plot axis
-[~, scale, prefix] = scaleSI(kgrid.t_array(num_source_time_points));
-
-% plot the input time series
+% % get the number of time points in the source signal
+% num_source_time_points = length(source.p(1,:));
+% 
+% % get suitable scaling factor for plot axis
+% [~, scale, prefix] = scaleSI(kgrid.t_array(num_source_time_points));
+% 
+% % plot the input time series
+% figure;
+% stackedPlot(kgrid.t_array(1:num_source_time_points) * scale, source.p);
+% xlabel(['Time [' prefix 's]']);
+% ylabel('Input Signals');
+%%
+% VISUALISATION FOR THE FINAL PATTERN
+% plot the simulated sensor data
 figure;
-stackedPlot(kgrid.t_array(1:num_source_time_points) * scale, source.p);
-xlabel(['Time [' prefix 's]']);
-ylabel('Input Signals');
+mx = max(abs(sensor_data.p_final(:)));
+imagesc(sensor_data.p_final, [-mx, mx]);
+colormap(getColorMap);
+ylabel('Sensor Position');
+xlabel('Time Step');
+colorbar;
