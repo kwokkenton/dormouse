@@ -9,9 +9,11 @@ import meep as mp
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
+import pandas as pd
 #%%
 """
 Current Tasks:
+    increase size to accompany no field region
     Something inbetween air and glass to prevent backscattering and stuff
     What angle will give the strongest evanescent field?
     how am i supposed to detect the material? Which direction, beyond the source out the other side?
@@ -27,11 +29,13 @@ Current Tasks:
 """
 #%%
 resolution = 50 #resolution per unit length
-cell = mp.Vector3(24,20) #cell size
+ys = 8
+cell = mp.Vector3(6,ys*2) #cell size
 pml_layers = [mp.PML(1.0,direction=mp.Y)] #absorbing layers the waves go around (periodic boundary conditions)
-theta = np.pi*50/180 #rotation angle
+theta = np.pi*43/180 #rotation angle
 
-wavelength = 6.33 #10^-8
+
+wavelength = 0.633 #10^-8
 freq = 1/wavelength
 eps = 2.31
 
@@ -43,36 +47,35 @@ def ampfunc(v3): #amplitude function used to for straight wave propagation
 geometry = [mp.Block(mp.Vector3(mp.inf,4,mp.inf), #infinite block
                      #e1 = mp.Vector3(np.cos(theta),np.sin(theta)), #decides 2 axis which the block is rotated in
                      #e2 = mp.Vector3(-np.sin(theta),np.cos(theta)),
-                     center = mp.Vector3(0,-6), #center should be high
+                     center = mp.Vector3(0,-2), #center should be high
                      material = mp.Medium(epsilon=eps)) #glass
                       ,
-            mp.Cylinder(radius = 1,
+            mp.Cylinder(radius = 0.02,
                     height=0,
-                    center = mp.Vector3(0,-1.5),
+                    center = mp.Vector3(0,1),
                     material = mp.Medium(epsilon=5))
                     ]
-#%%
 geometry2 = [mp.Block(mp.Vector3(mp.inf,4,mp.inf), #infinite block
                      #e1 = mp.Vector3(np.cos(theta),np.sin(theta)), #decides 2 axis which the block is rotated in
                      #e2 = mp.Vector3(-np.sin(theta),np.cos(theta)),
-                     center = mp.Vector3(0,-6), #center should be high
+                     center = mp.Vector3(0,-2), #center should be high
                      material = mp.Medium(epsilon=eps)) #glass
              ]
 #%%
 sources = [mp.Source(mp.ContinuousSource(frequency=freq), #0.633 = 633nm?
                     component=mp.Ez, #in ez direction not really sure what polarization has on these stuff
-                    size = mp.Vector3(24,0), #needs to encompass the whole cell for it to be straight
-                    center=mp.Vector3(0,-7), #just put it right around the bottom limit
+                    size = mp.Vector3(6,0), #needs to encompass the whole cell for it to be straight
+                    center=mp.Vector3(0,-4), #just put it right around the bottom limit
                     amp_func = ampfunc #amp function
                     )]
-
+#%%
 sim = mp.Simulation(cell_size=cell,
     	            boundary_layers=pml_layers,
                     geometry=geometry, #the geometry doesn't really work for now? Not really sure how
                     sources=sources, 
                     resolution=resolution,
-                    k_point = k #need to define this
-                    #default_material = mp.Medium(epsilon=1) 
+                    k_point = k, #need to define this
+                    default_material = mp.air 
                     )
 #%%
 sim2 = mp.Simulation(cell_size=cell,
@@ -80,21 +83,22 @@ sim2 = mp.Simulation(cell_size=cell,
                     geometry=geometry2, #the geometry doesn't really work for now? Not really sure how
                     sources=sources, 
                     resolution=resolution,
-                    k_point = k #need to define this
-                    #default_material = mp.Medium(epsilon=1) 
+                    k_point = k, #need to define this
+                    default_material = mp.air 
                     )
 
 # %%
 # sim.init_sim()
 # sim.solve_cw(tol=2e-6,maxiters=1000)
 #%%
-sim.run(mp.at_every(2, mp.output_png(mp.Ez, "-Zc dkbluered")),until=100) #saves jpeg files onto the working directory so be careful  
+sim.run(mp.at_every(1, mp.output_png(mp.Ez, "-Zc dkbluered")),until=30) #saves jpeg files onto the working directory so be careful  
 #%%
-sim2.run(mp.at_every(2, mp.output_png(mp.Ez, "-Zc dkbluered")),until=100) #saves jpeg files onto the working directory so be careful  
+sim2.run(mp.at_every(1, mp.output_png(mp.Ez, "-Zc dkbluered")),until=30) #saves jpeg files onto the working directory so be careful  
 #%%
 ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
 eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
-eps_data_2 = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
+#%%
+eps_data_2 = sim2.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
 ez_data_2 = sim2.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
 #%%
 """
@@ -102,14 +106,15 @@ plot difference between the no circle and with circle
 """
 plt.figure()
 plt.imshow(eps_data_2.transpose(), interpolation='spline36', cmap='binary')
-plt.imshow(np.real(ez_data_2 - ez_data).transpose(), interpolation='spline36', cmap='coolwarm', alpha=0.8)
+plt.imshow(np.real(ez_data_2).transpose(), interpolation='spline36', cmap='coolwarm', alpha=0.8)
 #plt.axis('off')
 plt.show()
+#plt.ylim(50,600)
 #%%
 """
 experimental setup
 """
-eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
+#eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
 plt.figure()
 plt.imshow(eps_data, interpolation='spline36', cmap='binary')
 #plt.axis('off')
@@ -119,7 +124,7 @@ plt.show()
 '''
 Electric field map with circle
 '''
-ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
+#ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
 plt.figure()
 plt.imshow(eps_data.transpose(), interpolation='spline36', cmap='binary')
 plt.imshow(np.real(ez_data).transpose(), interpolation='spline36', cmap='coolwarm', alpha=0.8)
@@ -131,10 +136,36 @@ plt.show()
 simulation 1 only (validation of the evanescent waves and scattering)
 with the ball only
 """
-xs = np.linspace(-6,6,len(ez_data[0]))
-plt.plot(xs,np.abs(ez_data[600])**2-np.abs(ez_data_2[600])**2,label = 'middle (difference)')
-plt.plot(xs,np.abs(ez_data[300])**2-np.abs(ez_data_2[300])**2,label='edge')
+xs = np.linspace(-8,8,len(ez_data_2[0]))
+#plt.plot(xs,np.abs(ez_data[150])**2)#,label = 'middle (difference)')
+plt.plot(xs,np.real(ez_data_2[150])**2)#,label = 'middle (difference)')
+
+#plt.plot(xs,np.abs(ez_data[0])**2,label='edge')
 
 plt.legend()
-plt.xlim(-5,5)
+#plt.xlim(-.15,0.15)
+#%%
+#angles = pd.DataFrame(ez_data_2[60],columns = ['forty_six'])
+angles['forty_three'] = ez_data_2[60]
+angles.to_csv('angle_data')
+#%%
+xs = np.linspace(0,ys*2,len(ez_data_2[0]))
+
+plt.plot(xs,np.real(angles['forty_four'])**2,label = '40')
+plt.plot(xs,np.real(angles['forty_four'])**2,label = '44')
+plt.plot(xs,np.real(angles['forty_five'])**2,label = '45')
+plt.plot(xs,np.real(angles['forty_six'])**2,label = '46')
+plt.plot(xs,np.real(angles['forty_seven'])**2,label = '47')
+plt.plot(xs,np.real(angles['forty_eight'])**2,label = '48')
+plt.plot(xs,np.real(angles['forty_nine'])**2,label = '49')
+plt.plot(xs,np.real(angles['fifty'])**2,label = '50')
+
+#plt.xlim(4.9,24)
+plt.legend()
+
+#%%
+plt.plot(xs,np.real(angles['forty_four'])**2,label = '40')
+
+
+
 
