@@ -51,8 +51,13 @@ element_index = -(num_elements - 1)/2:(num_elements - 1)/2;
 
 % use geometric beam forming to calculate the tone burst offsets for each
 % transducer element based on the element index
-tone_burst_offset = 60 + element_spacing * element_index * ...
-    sin(steering_angle * pi/180) / (medium.sound_speed * kgrid.dt);
+%tone_burst_offset = 60 + element_spacing * element_index * ...
+    %sin(steering_angle * pi/180) / (medium.sound_speed * kgrid.dt);
+
+% apply a phase wrapping, equivalent to modulo operator
+tone_burst_offset = 60 + mod(element_spacing * element_index * ...
+    sin(steering_angle * pi/180) / (medium.sound_speed* kgrid.dt), ... 
+       1/(tone_burst_freq* kgrid.dt)) ;
 
 % create the tone burst signals
 source.p = toneBurst(sampling_freq, tone_burst_freq, tone_burst_cycles, ...
@@ -99,17 +104,17 @@ sensor_data = kspaceFirstOrder2D(kgrid, medium, source, sensor, input_args{:});
 
 % VISUALISATIONS FOR THE DELAYS
 
-% % get the number of time points in the source signal
-% num_source_time_points = length(source.p(1,:));
-% 
-% % get suitable scaling factor for plot axis
-% [~, scale, prefix] = scaleSI(kgrid.t_array(num_source_time_points));
-% 
-% % plot the input time series
-% figure;
-% stackedPlot(kgrid.t_array(1:num_source_time_points) * scale, source.p);
-% xlabel(['Time [' prefix 's]']);
-% ylabel('Input Signals');
+% get the number of time points in the source signal
+num_source_time_points = length(source.p(1,:));
+
+% get suitable scaling factor for plot axis
+[~, scale, prefix] = scaleSI(kgrid.t_array(num_source_time_points));
+
+% plot the input time series
+figure;
+stackedPlot(kgrid.t_array(1:num_source_time_points) * scale, source.p);
+xlabel(['Time [' prefix 's]']);
+ylabel('Input Signals');
 %%
 % VISUALISATION FOR THE FINAL PATTERN
 % plot the simulated sensor data
