@@ -11,7 +11,8 @@ class slate:
         self.data = np.array(sio.loadmat(path)['data'])
 
     def slice(self, N):
-        return self.data[:,:,N]
+        self.sliced = self.data[:,:,N]
+        return self.sliced
 
     def plot_slice(self, N):
         plt.figure(figsize=(8,8))
@@ -22,6 +23,18 @@ class slate:
 
     def shape(self):
         return self.data.shape
+    
+    def rotate(self, N, angle):
+        self.rotated = rotate(self.slice(N).T, angle=angle, reshape= 1)
+        return self.rotated
+
+    def plot_rotated(self):
+        plt.figure()
+        rotated = self.rotated
+        X_new, Y_new  = np.meshgrid(range(rotated.shape[0]+1),range(rotated.shape[1]+1))
+        plt.pcolormesh(X_new,Y_new, rotated.T, vmin=-1.5, vmax=1.5)
+        return
+        
 
 #%%
 # Load data from .mat files from Matlab
@@ -69,4 +82,33 @@ def update(val):
 N_slider.on_changed(update)
 
 plt.show()
+# %%
+
+from scipy.ndimage.interpolation import rotate
+wrap.rotate(N=600, angle = 30)
+wrap.plot_rotated()
+# %%
+unwrap.rotate(N=600, angle = 30)
+unwrap.plot_rotated()
+
+# %% 
+# Plot along axes
+w = wrap.rotate(N=600, angle = 30)
+
+def plot_maxes(w):
+    ind = np.unravel_index(np.argmax(w, axis=None), w.shape)
+
+
+    plt.figure()
+    plt.title('Along x')
+    plt.plot(w[ind[0],:])
+    plt.show()
+
+    plt.figure()
+    plt.title('Along y')
+    plt.plot(w[:,ind[1]])
+    plt.show()
+
+plot_maxes(wrap.rotate(N=600, angle = 30))
+plot_maxes(unwrap.rotate(N=600, angle = 30))
 # %%
