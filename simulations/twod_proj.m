@@ -11,12 +11,16 @@
 
 
 clearvars;
+addpath('k-Wave/', 'simulations/')
 
 % =========================================================================
 % SET SIMULATION CASE
 % =========================================================================
 
-beam_type = 'focus_wrap';
+beam_type = 'focus';
+r = 20e-3;          % radius of the steer [mm] 
+steering_angle = 20; % angle of steering [deg]
+
 % =========================================================================
 % SIMULATION
 % =========================================================================
@@ -47,9 +51,8 @@ source.p_mask(x_offset, start_index:start_index + num_elements - 1) = 1;
 
 % define the properties of the tone burst used to drive the transducer
 sampling_freq = 1/kgrid.dt;     % [Hz]
-steering_angle = 30;            % [deg]
-x_focus = 0;                    % [m]
-z_focus = 10e-3;                % [m]
+x_focus = r * sind(steering_angle);      % [m]
+z_focus = r * cosd(steering_angle);      % [m]
 element_spacing = dx;           % [m]
 tone_burst_freq = 1e6;          % [Hz]
 tone_burst_cycles = 5;
@@ -119,10 +122,6 @@ input_args = {'DisplayMask', source.p_mask, 'PlotLayout', false};
 % run the simulation
 sensor_data = kspaceFirstOrder2D(kgrid, medium, source, sensor, input_args{:});
 
-% run the simulation
-%kspaceFirstOrder2D(kgrid, medium, source, [], input_args{:});
-
-
 % =========================================================================
 % VISUALISATION
 % =========================================================================
@@ -158,15 +157,17 @@ ylabel('Time delay')
 % colorbar;
 
 %%
-data = sensor_data.p;
-%save('pressure_unwrapped.mat', 'data');
+data = sensor_data;
+name = strcat(datestr(datetime('now'),'mmdd'), '_', ...
+        beam_type,'_', int2str(steering_angle), '.mat');
+save(name, 'data');
 
 %%
-test = sqrt((x_focus - element_spacing * ... 
-             element_index).^2 + z_focus^2)/(medium.sound_speed * kgrid.dt);
+%test = sqrt((x_focus - element_spacing * ... 
+%             element_index).^2 + z_focus^2)/(medium.sound_speed * kgrid.dt);
              
-test = test - min(test);
-ttt = mod(test, 1/(tone_burst_freq * kgrid.dt));
-plot(ttt);
+%test = test - min(test);
+%ttt = mod(test, 1/(tone_burst_freq * kgrid.dt));
+%plot(ttt);
 %hold on;
 %plot(test);
