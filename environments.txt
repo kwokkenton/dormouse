@@ -1,0 +1,2 @@
+/rds/general/user/yg2119/home/anaconda3
+/rds/general/user/yg2119/home/anaconda3/envs/mp

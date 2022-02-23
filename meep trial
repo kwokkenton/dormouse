@@ -14,9 +14,7 @@ import pandas as pd
 """
 Current Tasks:
     increase size to accompany no field region
-    Something inbetween air and glass to prevent backscattering and stuff
     What angle will give the strongest evanescent field?
-    how am i supposed to detect the material? Which direction, beyond the source out the other side?
     try different materials, how do i put in different metals 
         look for papers with nanoparticle scattering
         how does the metal scattering actually work? is there a metal sheet?
@@ -28,14 +26,14 @@ Current Tasks:
         
 """
 #%%
-resolution = 50 #resolution per unit length
-ys = 8
-cell = mp.Vector3(6,ys*2) #cell size
+resolution = 10 #resolution per unit length
+ys = 800
+cell = mp.Vector3(50,ys*2) #cell size
 pml_layers = [mp.PML(1.0,direction=mp.Y)] #absorbing layers the waves go around (periodic boundary conditions)
 theta = np.pi*43/180 #rotation angle
 
-
-wavelength = 0.633 #10^-8
+a = 1e-8
+wavelength = 63.3 #10^-8
 freq = 1/wavelength
 eps = 2.31
 
@@ -44,28 +42,28 @@ k = mp.Vector3(0,-1,0).rotate(mp.Vector3(0,0,1),theta).scale(freq) * np.sqrt(eps
 def ampfunc(v3): #amplitude function used to for straight wave propagation
     return np.exp(2*np.pi*1j*(k*v3))
 
-geometry = [mp.Block(mp.Vector3(mp.inf,4,mp.inf), #infinite block
+geometry = [mp.Block(mp.Vector3(mp.inf,300,mp.inf), #infinite block
                      #e1 = mp.Vector3(np.cos(theta),np.sin(theta)), #decides 2 axis which the block is rotated in
                      #e2 = mp.Vector3(-np.sin(theta),np.cos(theta)),
-                     center = mp.Vector3(0,-2), #center should be high
+                     center = mp.Vector3(0,0), #center should be high
                      material = mp.Medium(epsilon=eps)) #glass
                       ,
-            mp.Cylinder(radius = 0.02,
+            mp.Cylinder(radius = 2,
                     height=0,
-                    center = mp.Vector3(0,1),
+                    center = mp.Vector3(0,25),
                     material = mp.Medium(epsilon=5))
                     ]
-geometry2 = [mp.Block(mp.Vector3(mp.inf,4,mp.inf), #infinite block
+geometry2 = [mp.Block(mp.Vector3(mp.inf,300,mp.inf), #infinite block
                      #e1 = mp.Vector3(np.cos(theta),np.sin(theta)), #decides 2 axis which the block is rotated in
                      #e2 = mp.Vector3(-np.sin(theta),np.cos(theta)),
-                     center = mp.Vector3(0,-2), #center should be high
+                     center = mp.Vector3(0,0), #center should be high
                      material = mp.Medium(epsilon=eps)) #glass
              ]
 #%%
 sources = [mp.Source(mp.ContinuousSource(frequency=freq), #0.633 = 633nm?
                     component=mp.Ez, #in ez direction not really sure what polarization has on these stuff
-                    size = mp.Vector3(6,0), #needs to encompass the whole cell for it to be straight
-                    center=mp.Vector3(0,-4), #just put it right around the bottom limit
+                    size = mp.Vector3(50,0), #needs to encompass the whole cell for it to be straight
+                    center=mp.Vector3(0,0), #just put it right around the bottom limit
                     amp_func = ampfunc #amp function
                     )]
 #%%
@@ -93,7 +91,7 @@ sim2 = mp.Simulation(cell_size=cell,
 #%%
 sim.run(mp.at_every(1, mp.output_png(mp.Ez, "-Zc dkbluered")),until=30) #saves jpeg files onto the working directory so be careful  
 #%%
-sim2.run(mp.at_every(1, mp.output_png(mp.Ez, "-Zc dkbluered")),until=30) #saves jpeg files onto the working directory so be careful  
+sim2.run(mp.at_every(1, mp.output_png(mp.Ez, "-Zc dkbluered")),until=200) #saves jpeg files onto the working directory so be careful  
 #%%
 ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
 eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)

@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Feb 16 03:02:47 2022
+
+@author: go34660
+"""
+
+#%%
+'''
+what is the affect of longer waveguide length
+
+'''
+#%%
+
+import meep as mp
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+import pandas as pd
+resolution = 10 #resolution per unit length
+scale = 1
+ys = 50*scale
+xs = 30*scale
+cell = mp.Vector3(xs,ys*2) #cell size
+pml_layers = [mp.PML(5.0)] #absorbing layers the waves go around (periodic boundary conditions)
+
+a = 1e-8
+theta = np.pi*43/180 #rotation angle
+wavelength = 6.63*scale #10^-8
+freq = 1/wavelength
+eps = 2.31
+
+wvl_min = 6*scale
+wvl_max = 7*scale
+
+fmin = 1/wvl_max
+fmax = 1/wvl_min 
+fcen = 0.5*(fmin+fmax)
+df = fmax-fmin
+nfreq = 500  
+
+k = mp.Vector3(0,-1,0).rotate(mp.Vector3(0,0,1),theta).scale(freq) * np.sqrt(eps) #k vector which decides the dicrection the wave travels in
+
+def ampfunc(v3): #amplitude function used to for straight wave propagation
+    return np.exp(2*np.pi*1j*(k*v3))
+#%%
+geometry = [mp.Block(mp.Vector3(mp.inf,30*scale,mp.inf), #infinite block
+                     center = mp.Vector3(0,0), #center should be high
+                     material = mp.Medium(epsilon=eps)) #glass
+                      ,
+            mp.Cylinder(radius = 2,
+                    height=0,
+                    center = mp.Vector3(0,15*scale + 0.3),
+                    material = mp.Medium(epsilon=5))
+                    ]
+
+#symmetries = [mp.Mirror(mp.X,phase=1)]
+
+geometry2 = [mp.Block(mp.Vector3(mp.inf,30*scale,mp.inf), #infinite block
+                     #e1 = mp.Vector3(np.cos(theta),np.sin(theta)), #decides 2 axis which the block is rotated in
+                     #e2 = mp.Vector3(-np.sin(theta),np.cos(theta)),
+                     center = mp.Vector3(0,0), #center should be high
+                     material = mp.Medium(epsilon=eps)) #glass
+             ]
+
+sources = [mp.Source(mp.ContinuousSource(frequency=freq,is_integrated=True), #0.633 = 633nm?
+                    component=mp.Ez, #in ez direction not really sure what polarization has on these stuff
+                    size = mp.Vector3(xs,0), #needs to encompass the whole cell for it to be straight
+                    center=mp.Vector3(0,0), #just put it right around the bottom limit
+                    amp_func = ampfunc #amp function
+                    )]
+
+sim = mp.Simulation(resolution=resolution,
+                    cell_size=cell,
+                    boundary_layers=pml_layers,
+                    sources=sources,
+                    #k_point=k,
+                    #symmetries=symmetries,
+                    geometry=geometry)
+
+sim_empty = mp.Simulation(resolution=resolution,
+                    cell_size=cell,
+                    boundary_layers=pml_layers,
+                    sources=sources,
+                    #k_point=k,
+                    #symmetries=symmetries,
+                    geometry=geometry2)
+
+obs = mp.FluxRegion(center = mp.Vector3(0,-40*scale),
+                    size = mp.Vector3(xs,0)
+                    )
+#what is the wavelength scattered in this experiment?
+#%%
+flux_empty = sim_empty.add_flux(fcen, df, nfreq,obs)
+#%%
+sim_empty.run(mp.at_every(50, mp.output_png(mp.Ez, "-Zc dkbluered")),until=300)  #saves jpeg files onto the working directory so be careful  
+#%%
+empty_flux = mp.get_fluxes(flux_empty)
+#%%
+flux_obs = sim.add_flux(fcen, df, nfreq,obs)
+#%%
+sim.run(mp.at_every(50, mp.output_png(mp.Ez, "-Zc dkbluered")),until=300) #saves jpeg files onto the working directory so be careful  
+fin_flux = mp.get_fluxes(flux_obs)
+freqs = mp.get_flux_freqs(flux_obs)
+empty_freqs =  mp.get_flux_freqs(flux_empty)
+#%%
+plt.plot(1/np.array(freqs),np.array(fin_flux)**2,label='scatter')
+plt.plot(1/np.array(empty_freqs),np.array(empty_flux)**2,label='nothing')
+plt.plot(1/np.array(freqs),np.array(fin_flux)**2-np.array(empty_flux)**2,label='difference')
+
+plt.legend()
+#%%
+
+
+#%%
+ez_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Ez)
+eps_data = sim.get_array(center=mp.Vector3(), size=cell, component=mp.Dielectric)
+#%%
+
+plt.imshow(eps_data.transpose(), interpolation='spline36', cmap='binary')
+
