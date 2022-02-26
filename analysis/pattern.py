@@ -155,7 +155,7 @@ ax[2].pcolormesh(X, Y, a2)
 # Comparing the cross correlation and the auto-correlation
 fig, ax = plt.subplots(1, 2, figsize=(8, 4))
 X, Y = np.meshgrid(range(a1.shape[0]+1), range(a1.shape[0]+1))
-ax[0].pcolormesh(X, Y, correlate(a1, a2, 'same'))
+ax[0].pcolormesh(X, Y, correlate(a1, a1, 'same'))
 ax[1].pcolormesh(X, Y, correlate(a2, a2, 'same'))
 
 # TODO Try and quantify the spread
