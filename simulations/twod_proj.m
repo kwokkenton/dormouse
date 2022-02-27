@@ -17,8 +17,8 @@ addpath('k-Wave/', 'simulations/')
 % SET SIMULATION CASE
 % =========================================================================
 
-beam_type = 'focus';
-r = 20e-3;          % radius of the steer [mm] 
+beam_type = 'focus_wrap';
+r = 20e-3;          % radius of the steer [m] 
 steering_angle = 20; % angle of steering [deg]
 
 % =========================================================================
@@ -54,7 +54,7 @@ sampling_freq = 1/kgrid.dt;     % [Hz]
 x_focus = r * sind(steering_angle);      % [m]
 z_focus = r * cosd(steering_angle);      % [m]
 element_spacing = dx;           % [m]
-tone_burst_freq = 1e6;          % [Hz]
+tone_burst_freq = 3e6;          % [Hz]
 tone_burst_cycles = 5;
 
 % create an element index relative to the centre element of the transducer
@@ -160,7 +160,7 @@ ylabel('Time delay')
 data = sensor_data;
 name = strcat(datestr(datetime('now'),'mmdd'), '_', ...
         beam_type,'_', int2str(steering_angle), '.mat');
-save(name, 'data');
+%save(name, 'data');
 
 %%
 %test = sqrt((x_focus - element_spacing * ... 
