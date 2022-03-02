@@ -7,7 +7,7 @@
 % Field Patterns Example.
 %
 % author: Kenton Kwok
-% date: 7/2/2022, last updated 18/2/2022
+% date: 7/2/2022, last updated 28/2/2022
 
 
 clearvars;
@@ -17,9 +17,9 @@ addpath('k-Wave/', 'simulations/')
 % SET SIMULATION CASE
 % =========================================================================
 
-beam_type = 'focus_wrap';
-r = 20e-3;          % radius of the steer [m] 
-steering_angle = 20; % angle of steering [deg]
+beam_type = 'focus';
+r = 25e-3;          % radius of the steer [m] 
+steering_angle = 30; % angle of steering [deg]
 
 % =========================================================================
 % SIMULATION
@@ -28,7 +28,7 @@ steering_angle = 20; % angle of steering [deg]
 % create the computational grid
 Nx = 256;           % number of grid points in the x (row) direction
 Ny = Nx;            % number of grid points in the y (column) direction
-dx = 50e-3/Nx;    	% grid point spacing in the x direction [m]
+dx = 100e-3/Nx;    	% grid point spacing in the x direction [m]
 dy = dx;            % grid point spacing in the y direction [m]
 kgrid = kWaveGrid(Nx, dx, Ny, dy);
 
@@ -54,32 +54,35 @@ sampling_freq = 1/kgrid.dt;     % [Hz]
 x_focus = r * sind(steering_angle);      % [m]
 z_focus = r * cosd(steering_angle);      % [m]
 element_spacing = dx;           % [m]
-tone_burst_freq = 3e6;          % [Hz]
+tone_burst_freq = 1e6;          % [Hz]
 tone_burst_cycles = 5;
 
 % create an element index relative to the centre element of the transducer
 element_index = -(num_elements - 1)/2:(num_elements - 1)/2;
 
+offset = 70;
+
 switch beam_type
     % this modifies the tone_burst offsets, note that they are
     % element-indexed
+    
     case 'steer'
         % use geometric beam forming to calculate the tone burst offsets for 
         % each transducer element based on the element index
-        tone_burst_offset = 60 + element_spacing * element_index * ...
+        tone_burst_offset = offset + element_spacing * element_index * ...
             sin(steering_angle * pi/180) / (medium.sound_speed * kgrid.dt);
     case 'steer_wrap'
 %         apply a phase wrapping, equivalent to modulo operator
-        tone_burst_offset = 60 + mod(element_spacing * element_index * ...
+        tone_burst_offset = offset + mod(element_spacing * element_index * ...
             sin(steering_angle * pi/180) / (medium.sound_speed* kgrid.dt), ... 
                1/(tone_burst_freq* kgrid.dt)) ;
     case 'focus'
         r = sqrt(z_focus^2 + x_focus^2);
-        tone_burst_offset = 100 + (r - sqrt((x_focus - element_spacing * ... 
+        tone_burst_offset = offset + (r - sqrt((x_focus - element_spacing * ... 
              element_index).^2 + z_focus^2))/(medium.sound_speed * kgrid.dt);
     case 'focus_wrap'
         r = sqrt(z_focus^2 + x_focus^2);
-        tone_burst_offset = 100 + mod(r - sqrt((x_focus - element_spacing * ... 
+        tone_burst_offset = offset + mod(r - sqrt((x_focus - element_spacing * ... 
              element_index).^2 + z_focus^2)/(medium.sound_speed * ...
              kgrid.dt), 1/(tone_burst_freq* kgrid.dt));
 end 
@@ -113,7 +116,7 @@ sensor.mask = [rect1_x_start, rect1_y_start, rect1_x_end, rect1_y_end].';
 
 % set the record mode to capture a time series of pressure and velocity
 sensor.record = {'p_max'};
-sensor.record = {'p', 'u'};
+sensor.record = {'p', 'I'};
 
 % assign the input options
 %input_args = { 'PMLInside', false, 'PlotPML', false};
@@ -129,28 +132,29 @@ sensor_data = kspaceFirstOrder2D(kgrid, medium, source, sensor, input_args{:});
 % VISUALISATIONS FOR THE DELAYS
 
 % get the number of time points in the source signal
-num_source_time_points = length(source.p(1,:));
-
-% get suitable scaling factor for plot axis
-[~, scale, prefix] = scaleSI(kgrid.t_array(num_source_time_points));
-
-% plot the input time series
-figure;
-stackedPlot(kgrid.t_array(1:num_source_time_points) * scale, source.p);
-xlabel(['Time [' prefix 's]']);
-ylabel('Input Signals');
+% num_source_time_points = length(source.p(1,:));
+% 
+% % get suitable scaling factor for plot axis
+% [~, scale, prefix] = scaleSI(kgrid.t_array(num_source_time_points));
+% 
+% % plot the input time series
+% figure;
+% stackedPlot(kgrid.t_array(1:num_source_time_points) * scale, source.p);
+% xlabel(['Time [' prefix 's]']);
+% ylabel('Input Signals');
 
 %%
-figure;
-plot(element_index, tone_burst_offset*kgrid.dt);
-xlabel('Element Index');
-ylabel('Time delay')
+% figure;
+% plot(element_index, tone_burst_offset*kgrid.dt);
+% xlabel('Element Index');
+% ylabel('Time delay')
 %%
 % VISUALISATION FOR THE FINAL PATTERN
 % plot the simulated sensor data
 % figure;
-% mx = max(abs(sensor_data.p_max(:)));
-% imagesc(sensor_data.p_max, [-mx, mx]);
+% 
+% mx = max(abs(sensor_data.Ix), [], 'all');
+% imagesc(max(sensor_data.Ix, [], 3), [-mx, mx]);
 % colormap(getColorMap);
 % ylabel('Sensor Position');
 % xlabel('Time Step');
@@ -160,7 +164,7 @@ ylabel('Time delay')
 data = sensor_data;
 name = strcat(datestr(datetime('now'),'mmdd'), '_', ...
         beam_type,'_', int2str(steering_angle), '.mat');
-%save(name, 'data');
+save(name, 'data');
 
 %%
 %test = sqrt((x_focus - element_spacing * ... 
