@@ -85,6 +85,7 @@ source.p_mask = zeros(Nx, Ny);
 start_index = Ny/2 - round(num_elements/2) + 1;
 source.p_mask(x_offset, start_index:start_index + num_elements - 1) = 1;
 
+
 % =========================================================================
 % DEFINE THE INPUT SIGNAL
 % =========================================================================
