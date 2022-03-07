@@ -1,15 +1,14 @@
-% To simulate a 2D pressure field
-% with an arbitrary transducer response
-% frequency, phase,
+% Two dimensional B-mode scan of an ultrasound phantom
 %
-% This example demonstrates how to use k-Wave to steer a tone burst from a
-% linear array transducer in 2D. It builds on the Simulating Transducer
-% Field Patterns Example.
+% This example steers a tone burst from a linear array transducer in 2D to 
+% generate a B-mode image over a series of angles. The beam_type can be
+% focused, steered and can be phase-wrapped or not to reflect the DORMOUSE
+% system being simulated.
 %
 % author: Kenton Kwok
-% date: 7/2/2022, last updated 5/3/2022
+% last updated 7/3/2022
 %
-% Code is taken from K-Wave examples
+% Code is taken from K-Wave examples by Bradley Treeby 2020
 
 
 clearvars;
@@ -22,8 +21,8 @@ DATA_CAST = 'single';
 % =========================================================================
 % SET SIMULATION CASE
 % =========================================================================
-beam_type = 'steer';
-r = 25e-3;          % radius of the steer [m]
+beam_type = 'focus';
+r = 50e-3;          % radius of the steer [m]
 
 
 % =========================================================================
@@ -91,9 +90,9 @@ element_indexes = -(num_elements - 1)/2:(num_elements - 1)/2;
 % =========================================================================
 
 % define a random distribution of scatterers for the medium
-background_map_mean = 1;
-background_map_std = 0.008;
-background_map = background_map_mean + background_map_std * randn([Nx, Ny]);
+%background_map_mean = 1;
+%background_map_std = 0.008;
+%background_map = background_map_mean + background_map_std * randn([Nx, Ny]);
 
 % define a random distribution of scatterers for the highly scattering
 % region
@@ -109,15 +108,22 @@ sound_speed_map = c0 * ones(Nx, Ny); %.* background_map;
 density_map = rho0 * ones(Nx, Ny); %.* background_map;
 
 % define a sphere for a highly scattering region
-radius = 10e-3;
+radius = 5e-3;
 x_pos = 0*32e-3;
 y_pos = 0*dy * Ny/2;
-
 scattering_region1 = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+
+radius = 10e-3;
+x_pos = 32e-3;
+y_pos = 30e-3;
+scattering_region2 = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
 
 % assign region
 sound_speed_map(scattering_region1 == 1) = scattering_c0(scattering_region1 == 1);
 density_map(scattering_region1 == 1) = scattering_rho0(scattering_region1 == 1);
+
+sound_speed_map(scattering_region2 == 1) = scattering_c0(scattering_region2 == 1);
+density_map(scattering_region2 == 1) = scattering_rho0(scattering_region2 == 1);
 
 % assign to the medium inputs
 medium.sound_speed = sound_speed_map;
@@ -142,7 +148,7 @@ sensor.record = {'p'};
 % =========================================================================
 
 % Range of steering angles to test
-steering_angles = -32:8:32;
+steering_angles = -48:4:48;
 
 % Preallocate the storage for the scanned image
 number_scan_lines = length(steering_angles);
@@ -165,7 +171,7 @@ for angle_index = 1:number_scan_lines
     x_focus = r * sind(steering_angle);      % [m]
     z_focus = r * cosd(steering_angle);      % [m]
     
-    offset = 70;
+    offset = 100;
 
     switch beam_type
         % this modifies the tone_burst offsets, note that they are
@@ -203,7 +209,7 @@ for angle_index = 1:number_scan_lines
     % ---------------------------------------------------------------------
     % Generate Beamformed lines
     % ---------------------------------------------------------------------
-    
+
     % get the current apodization setting
     apodization = ones(num_elements);
 
@@ -234,14 +240,16 @@ for angle_index = 1:number_scan_lines
 
 end
 
+backup = scan_lines; 
+%%
+scan_lines = backup;
 % trim the delay offset from the scan line data
-t0_offset = round(length(input_signal) / 2) + (transducer.appended_zeros - transducer.beamforming_delays_offset);
+t0_offset = round(length(source.p) );
 scan_lines = scan_lines(:, t0_offset:end);
 
 % get the new length of the scan lines
 Nt = length(scan_lines(1, :));
 
-%%
 % =========================================================================
 % PROCESS THE RESULTS
 % =========================================================================
@@ -252,18 +260,18 @@ Nt = length(scan_lines(1, :));
 
 % create a window to set the first part of each scan line to zero to remove
 % interference from the input signal
-scan_line_win = getWin(Nt * 2, 'Tukey', 'Param', 0.05).';
-scan_line_win = [zeros(1, t0_offset * 2), scan_line_win(1:end/2 - t0_offset * 2)];
+%scan_line_win = getWin(Nt * 2, 'Tukey', 'Param', 0.05).';
+%scan_line_win = [zeros(1, t0_offset * 2), scan_line_win(1:end/2 - t0_offset * 2)];
 
 % apply the window to each of the scan lines
 %scan_lines = bsxfun(@times, scan_line_win, scan_lines);
 
 % Time-window the sensor_data to not pick up the input signal
 % Get the number of time points in the source signal
-num_source_time_points = length(source.p(1,:));
-scan_lines = scan_lines(1:end, 3* num_source_time_points:end);
+%num_source_time_points = length(source.p(1,:));
+%scan_lines = scan_lines(1:end, 3* num_source_time_points:end);
 
-%%
+
 % get the new length of the scan lines
 Nt = length(scan_lines(1, :));
 % -------------------------------------------------------------------------
@@ -283,54 +291,35 @@ tgc = exp(tgc_alpha_np_m * 2 * r);
 % apply the time gain compensation to each of the scan lines
 scan_lines = bsxfun(@times, tgc, scan_lines);
 
+% -------------------------------------------------------------------------
 % Frequency Filtering
 % filter the scan lines using both the transmit frequency and the second
 % harmonic
+% -------------------------------------------------------------------------
 scan_lines_fund = gaussianFilter(scan_lines, 1/kgrid.dt, tone_burst_freq, 100, true);
 
+% -------------------------------------------------------------------------
 % Envelope Detection
+% -------------------------------------------------------------------------
 % envelope detection
 scan_lines_fund = envelopeDetection(scan_lines_fund);
-%%
+
+% -------------------------------------------------------------------------
 % Log Compression
+% -------------------------------------------------------------------------
 
 % normalised log compression
 compression_ratio = 3;
 scan_lines_fund = logCompression(scan_lines_fund, compression_ratio, true);
 % Scan Conversion
-%%
+
 % =========================================================================
 % VISUALISATION
 % =========================================================================
-% figure;
-% plot(element_index, tone_burst_offset*kgrid.dt);
-% xlabel('Element Index');
-% ylabel('Time delay')
-%%
-% VISUALISATION FOR THE FINAL PATTERN
-% plot the simulated sensor data
-% figure;
-%
-% mx = max(abs(sensor_data.Ix), [], 'all');
-% imagesc(max(sensor_data.Ix, [], 3), [-mx, mx]);
-% colormap(getColorMap);
-% ylabel('Sensor Position');
-% xlabel('Time Step');
-% colorbar;
-
-%%
-%data = sensor_data;
-%name = strcat(datestr(datetime('now'),'mmdd'), '_', ...
-%        beam_type,'_', int2str(steering_angle), '.mat');
-%save(name, 'data');
 
 image_size = [Nx * dx, Ny * dy];
-%%
-b_mode_fund = scanConversion(scan_lines_fund, steering_angles, image_size, c0, kgrid.dt);
 
-%% =========================================================================
-% VISUALISATION
-% =========================================================================
+b_mode_fund = scanConversion(scan_lines_fund, steering_angles, image_size, c0, kgrid.dt);
 
 
 % create the axis variables
@@ -362,7 +351,7 @@ title('B-Mode Image');
 colormap(gray);
 
 scaleFig(2, 1);
-%%
+
 % plot the medium and the B-mode images
 figure;
 subplot(1, 3, 1);
