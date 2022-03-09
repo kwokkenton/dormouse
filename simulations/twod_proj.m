@@ -17,7 +17,7 @@ addpath('k-Wave/', 'simulations/')
 % SET SIMULATION CASE
 % =========================================================================
 
-beam_type = 'focus';
+beam_type = 'focus_wrap';
 r = 25e-3;          % radius of the steer [m] 
 steering_angle = 30; % angle of steering [deg]
 
@@ -26,10 +26,22 @@ steering_angle = 30; % angle of steering [deg]
 % =========================================================================
 
 % create the computational grid
-Nx = 256;           % number of grid points in the x (row) direction
-Ny = Nx;            % number of grid points in the y (column) direction
-dx = 100e-3/Nx;    	% grid point spacing in the x direction [m]
-dy = dx;            % grid point spacing in the y direction [m]
+
+% set the size of the perfectly matched layer (PML)
+PML_X_SIZE = 20;            % [grid points]
+PML_Y_SIZE = 10;            % [grid points]
+
+% set total number of grid points not including the PML
+Nx = 256 - 2*PML_X_SIZE;    % [grid points]
+Ny = 256 - 2*PML_Y_SIZE;    % [grid points]
+
+% set desired grid size in the x-direction not including the PML
+x = 100e-3;                  % [m]
+
+% calculate the spacing between the grid points
+dx = x/Nx;                  % grid point spacing in the x direction [m]
+dy = dx;                    % grid point spacing in the y direction [m]
+
 kgrid = kWaveGrid(Nx, dx, Ny, dy);
 
 % define the properties of the propagation medium, with sound speed and 
@@ -44,7 +56,7 @@ kgrid.makeTime(medium.sound_speed);
 
 % define source mask for a linear transducer  
 num_elements = 64;      % [grid points]
-x_offset = 25;          % [grid points]
+x_offset = 1;          % [grid points]
 source.p_mask = zeros(Nx, Ny);
 start_index = Ny/2 - round(num_elements/2) + 1;
 source.p_mask(x_offset, start_index:start_index + num_elements - 1) = 1;
@@ -60,7 +72,7 @@ tone_burst_cycles = 5;
 % create an element index relative to the centre element of the transducer
 element_index = -(num_elements - 1)/2:(num_elements - 1)/2;
 
-offset = 70;
+offset = 100;
 
 switch beam_type
     % this modifies the tone_burst offsets, note that they are
@@ -120,7 +132,8 @@ sensor.record = {'p', 'I'};
 
 % assign the input options
 %input_args = { 'PMLInside', false, 'PlotPML', false};
-input_args = {'DisplayMask', source.p_mask, 'PlotLayout', false};
+input_args = {'DisplayMask', source.p_mask, 'PlotLayout', false, 'PMLInside', false,... 
+    'PlotPML', false, 'PMLSize', [PML_X_SIZE, PML_Y_SIZE]};
 
 % run the simulation
 sensor_data = kspaceFirstOrder2D(kgrid, medium, source, sensor, input_args{:});
@@ -164,14 +177,6 @@ sensor_data = kspaceFirstOrder2D(kgrid, medium, source, sensor, input_args{:});
 data = sensor_data;
 name = strcat(datestr(datetime('now'),'mmdd'), '_', ...
         beam_type,'_', int2str(steering_angle), '.mat');
-save(name, 'data');
+%save(name, 'data');
 
-%%
-%test = sqrt((x_focus - element_spacing * ... 
-%             element_index).^2 + z_focus^2)/(medium.sound_speed * kgrid.dt);
-             
-%test = test - min(test);
-%ttt = mod(test, 1/(tone_burst_freq * kgrid.dt));
-%plot(ttt);
-%hold on;
-%plot(test);
+
