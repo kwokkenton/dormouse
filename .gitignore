@@ -3,3 +3,4 @@ k-Wave/
 raw_data/
 processed_data/
 *.asv
+*.mat
