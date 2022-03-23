@@ -2,7 +2,8 @@
 
 .mat file -> .npy file
 rotated according to the angle the beam was formed in
-this 
+this configuration
+
 """
 
 # Normalisation
@@ -12,7 +13,7 @@ import numpy as np
 
 
 def import_mat(path):
-    """imports .mat file in the saved kwave format
+    """Imports .mat file in the saved kwave format
         .mat file should have 3 saved variables as a time series
 
     Args:
@@ -22,25 +23,35 @@ def import_mat(path):
         data (np.array): 4 dimensional Numpy array of time series data
     """
     data = sio.loadmat(path)['data'][0][0]
-    data = np.array([data[0], data[1], data[2]])
+    data = np.array([data[i] for i in range(len(data))])
     return data
 
 
 def rotate_all(data, angle):
+    """Rotates data
+
+    Args:
+        data (np.array): 4 dimensional Numpy array of time series data
+        angle (_type_): angle to normal to which beam is steered
+
+    Returns:
+        _type_: _description_
+    """
     return rotate(data, -angle, axes=(2, 1), reshape=False)
 
 
-for mode in ['focus', 'focus_wrap']:
-    for angle in [0, 10, 20, ]:
-        date = '0222'
-        name = '_'.join([date, mode, str(angle)])
-        fpath = '../raw_data/' + name + '.mat'
+if __name__ == '__main__':
+    for mode in ['focus', 'focus_wrap']:
+        for angle in [0, 10, 20, 30]:
+            date = '0302'
+            name = '_'.join([date, mode, str(angle)])
+            fpath = '../raw_data/' + name + '.mat'
 
-        data = import_mat(fpath)
-        rotated = rotate(data, -angle, axes=(2, 1), reshape=False)
+            data = import_mat(fpath)
+            rotated = rotate(data, -angle, axes=(2, 1), reshape=False)
 
-        savepath = '../processed_data/' + name + '.npy'
-        with open(savepath, 'wb') as f:
-            np.save(f, rotated)
+            savepath = '../processed_data/' + name + '.npy'
+            with open(savepath, 'wb') as f:
+                np.save(f, rotated)
 
-print('Done')
+    print('Done')
