@@ -21,8 +21,13 @@ DATA_CAST = 'single';
 % =========================================================================
 % SET SIMULATION CASE
 % =========================================================================
-beam_type = 'focus';
+beam_type = 'focusana';
+phantom = 'spheres';
 r = 50e-3;          % radius of the steer [m]
+
+% Range of steering angles to test
+steering_angles = -50:2:50;
+%steering_angles = -4:8:4;
 
 % =========================================================================
 % DEFINE THE K-WAVE GRID
@@ -64,7 +69,8 @@ medium.alpha_power = 1.5;
 %medium.BonA = 6;
 
 % create the time array
-kgrid.makeTime(medium.sound_speed);
+t_end = (Nx * dx) * 2.2 / c0;   % [s]
+kgrid.makeTime(c0, [], t_end);
 
 % define source mask for a linear transducer
 num_elements = 64;      % [grid points]
@@ -106,23 +112,136 @@ scattering_rho0 = scattering_c0 / 1.5;
 sound_speed_map = c0 * ones(Nx, Ny); %.* background_map;
 density_map = rho0 * ones(Nx, Ny); %.* background_map;
 
-% define a sphere for a highly scattering region
-radius = 5e-3;
-x_pos = 0*32e-3;
-y_pos = 0*dy * Ny/2;
-scattering_region1 = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+switch phantom
+    case 'spheres'
+        %two spheres
+        background_map_mean = 1;
+        background_map_std = 0.008;
+        background_map = background_map_mean + background_map_std * randn([Nx, Ny]);
+        
+        % define properties
+        sound_speed_map = c0 * ones(Nx, Ny) .* background_map;
+        density_map = rho0 * ones(Nx, Ny) .* background_map;
 
-radius = 10e-3;
-x_pos = 32e-3;
-y_pos = 30e-3;
-scattering_region2 = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+        %define a sphere for a highly scattering region
+        radius = 5e-3;
+        x_pos = 0*32e-3;
+        y_pos = 0*dy * Ny/2;
+        scattering_region1 = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+        
+        radius = 10e-3;
+        x_pos = 32e-3;
+        y_pos = 30e-3;
+        scattering_region2 = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+        
+        % assign region
+        sound_speed_map(scattering_region1 == 1) = scattering_c0(scattering_region1 == 1);
+        density_map(scattering_region1 == 1) = scattering_rho0(scattering_region1 == 1);
+        
+        sound_speed_map(scattering_region2 == 1) = scattering_c0(scattering_region2 == 1);
+        density_map(scattering_region2 == 1) = scattering_rho0(scattering_region2 == 1);
+    case 'point'
+        %--------
+        % point phantoms
+        % define a sphere for a highly scattering region
+        radius = 1e-3;
+        
+        %Generate vertical line
+        for n = 1:7
+            x_pos = n * x / 8;
+            y_pos = 0*dy * Ny/2;
+        
+            scattering_region = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+            sound_speed_map(scattering_region == 1) = scattering_c0(scattering_region == 1);
+            density_map(scattering_region == 1) = scattering_rho0(scattering_region == 1);
+        end
+        
+        % Generate horizontal lines
+        
+        for n = 1:5
+            x_pos = 2 * x / 8;
+            y_pos = n* dy * Ny  / 6;
+        
+            scattering_region = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+            sound_speed_map(scattering_region == 1) = scattering_c0(scattering_region == 1);
+            density_map(scattering_region == 1) = scattering_rho0(scattering_region == 1);
+        end
 
-% assign region
-sound_speed_map(scattering_region1 == 1) = scattering_c0(scattering_region1 == 1);
-density_map(scattering_region1 == 1) = scattering_rho0(scattering_region1 == 1);
+        for n = 1:5
+            x_pos = 50e-3;
+            y_pos = n* dy * Ny  / 6;
+        
+            scattering_region = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+            sound_speed_map(scattering_region == 1) = scattering_c0(scattering_region == 1);
+            density_map(scattering_region == 1) = scattering_rho0(scattering_region == 1);
+        end
+                
+        
+        for n = 1:5
+            x_pos = 7 * x / 8;
+            y_pos = n* dy * Ny  / 6;
+        
+            scattering_region = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+            sound_speed_map(scattering_region == 1) = scattering_c0(scattering_region == 1);
+            density_map(scattering_region == 1) = scattering_rho0(scattering_region == 1);
+        end
+    case 'shapp'
+           % Shapp Logan Phantom
+    case 'anechoic'
+        %Anechoic phantom
+        background_map_mean = 1;
+        background_map_std = 0.008;
+        background_map = background_map_mean + background_map_std * randn([Nx, Ny]);
+        
+        % define properties
+        sound_speed_map = c0 * ones(Nx, Ny) .* background_map;
+        density_map = rho0 * ones(Nx, Ny) .* background_map;
+        
+        % Generate balls
+        radius = 5e-3;
+        for n = 1:5
+            x_pos = n * x / 6;
+            y_pos = 0*dy * Ny/2;
+            scattering_region = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+            sound_speed_map(scattering_region == 1) = c0;
+            density_map(scattering_region == 1) = rho0;
+        end
+        
+        for n = 1:5
+            x_pos = n * x / 6;
+            y_pos = 1* dy * Ny  / 6;
+            scattering_region = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+            sound_speed_map(scattering_region == 1) = c0;
+            density_map(scattering_region == 1) = rho0;
+        end
+        
+        for n = 1:5
+            x_pos = n * x / 6;
+            y_pos = 2* dy * Ny  / 6;
+            scattering_region = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+            sound_speed_map(scattering_region == 1) = c0;
+            density_map(scattering_region == 1) = rho0;
+        end
 
-sound_speed_map(scattering_region2 == 1) = scattering_c0(scattering_region2 == 1);
-density_map(scattering_region2 == 1) = scattering_rho0(scattering_region2 == 1);
+        for n = 1:5
+            x_pos = n * x / 6;
+            y_pos = 5* dy * Ny  / 6;
+            scattering_region = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+            sound_speed_map(scattering_region == 1) = c0;
+            density_map(scattering_region == 1) = rho0;
+        end
+
+        for n = 1:5
+            x_pos = n * x / 6;
+            y_pos = 4* dy * Ny  / 6;
+            scattering_region = makeDisc(Nx, Ny, round(x_pos / dx), round(y_pos / dx), round(radius/dx));
+            sound_speed_map(scattering_region == 1) = c0;
+            density_map(scattering_region == 1) = rho0;
+        end
+end
+
+%---
+
 
 % assign to the medium inputs
 medium.sound_speed = sound_speed_map;
@@ -146,16 +265,14 @@ sensor.record = {'p'};
 % RUN THE SIMULATION
 % =========================================================================
 
-% Range of steering angles to test
-steering_angles = -48:4:48;
-
 % Preallocate the storage for the scanned image
 number_scan_lines = length(steering_angles);
 scan_lines = zeros(number_scan_lines, kgrid.Nt);
 
 % Assign the input options
 input_args = {'DisplayMask', source.p_mask, 'PMLInside', false, 'PlotPML', false, ...
-    'PlotLayout', false, 'PMLSize', [PML_X_SIZE, PML_Y_SIZE], 'DataCast', DATA_CAST};
+    'PlotLayout', false, 'PMLSize', [PML_X_SIZE, PML_Y_SIZE], 'DataCast', DATA_CAST, ...
+    'PlotSim', false};
 
 % Loop through the range of angles 
 for angle_index = 1:number_scan_lines
@@ -201,7 +318,10 @@ for angle_index = 1:number_scan_lines
     % create the tone burst signals
     source.p = toneBurst(sampling_freq, tone_burst_freq, tone_burst_cycles, ...
         'SignalOffset', tone_burst_offset);
-
+    
+    n = 0:num_elements-1;
+    win = (0.5 - 0.5 * cos(2 * pi * n / (num_elements - 1))).';
+    source.p = source.p .* win;
     % Run the simulation
     sensor_data = kspaceFirstOrder2D(kgrid, medium, source, sensor, input_args{:});
 
@@ -243,7 +363,10 @@ backup = scan_lines;
 %%
 scan_lines = backup;
 % trim the delay offset from the scan line data
-t0_offset = round(length(source.p) );
+% value 1.4 to register the image (need to fix)
+factor = 1.4;
+%factor = 1;
+t0_offset = round(length(source.p) *factor);
 scan_lines = scan_lines(:, t0_offset:end);
 
 % get the new length of the scan lines
@@ -259,11 +382,11 @@ Nt = length(scan_lines(1, :));
 
 % create a window to set the first part of each scan line to zero to remove
 % interference from the input signal
-%scan_line_win = getWin(Nt * 2, 'Tukey', 'Param', 0.05).';
-%scan_line_win = [zeros(1, t0_offset * 2), scan_line_win(1:end/2 - t0_offset * 2)];
-
-% apply the window to each of the scan lines
-%scan_lines = bsxfun(@times, scan_line_win, scan_lines);
+scan_line_win = getWin(Nt * 2, 'Tukey', 'Param', 0.05).';
+scan_line_win = [zeros(1, t0_offset-40), scan_line_win(1:end/2 - t0_offset+40 )];
+% % 
+% % apply the window to each of the scan lines
+scan_lines = bsxfun(@times, scan_line_win, scan_lines);
 
 % Time-window the sensor_data to not pick up the input signal
 % Get the number of time points in the source signal
@@ -326,53 +449,53 @@ x_axis = [0, Nx * dx * 1e3];    % [mm]
 y_axis = [0, Ny * dy * 1e3];    % [mm]
 
 % plot the data before and after scan conversion
-figure;
-subplot(1, 3, 1);
-imagesc(steering_angles, x_axis, scan_lines.');
-axis square;
-xlabel('Steering angle [deg]');
-ylabel('Depth [mm]');
-title('Raw Scan-Line Data');
-
-subplot(1, 3, 2);
-imagesc(steering_angles, x_axis, scan_lines_fund.');
-axis square;
-xlabel('Steering angle [deg]');
-ylabel('Depth [mm]');
-title('Processed Scan-Line Data');
-
-subplot(1, 3, 3);
-imagesc(y_axis, x_axis, b_mode_fund);
-axis square;
-xlabel('Horizontal Position [mm]');
-ylabel('Depth [mm]');
-title('B-Mode Image');
-colormap(gray);
-
-scaleFig(2, 1);
+% figure;
+% subplot(1, 3, 1);
+% imagesc(steering_angles, x_axis, scan_lines.');
+% axis square;
+% xlabel('Steering angle [deg]');
+% ylabel('Depth [mm]');
+% title('Raw Scan-Line Data');
+% 
+% subplot(1, 3, 2);
+% imagesc(steering_angles, x_axis, scan_lines_fund.');
+% axis square;
+% xlabel('Steering angle [deg]');
+% ylabel('Depth [mm]');
+% title('Processed Scan-Line Data');
+% 
+% subplot(1, 3, 3);
+% imagesc(y_axis, x_axis, b_mode_fund);
+% axis square;
+% xlabel('Horizontal Position [mm]');
+% ylabel('Depth [mm]');
+% title('B-Mode Image');
+% colormap(gray);
+% 
+% scaleFig(2, 1);
 
 % plot the medium and the B-mode images
 figure;
-subplot(1, 3, 1);
+subplot(1, 2, 1);
 imagesc(y_axis, x_axis, medium.sound_speed(:, :, end));
 axis image;
 xlabel('Horizontal Position [mm]');
 ylabel('Depth [mm]');
 title('Scattering Phantom');
 
-subplot(1, 3, 2);
+subplot(1, 2, 2);
 imagesc(y_axis, x_axis, b_mode_fund);
 axis image;
 xlabel('Horizontal Position [mm]');
 ylabel('Depth [mm]');
 title('B-Mode Image');
 
-subplot(1, 3, 3);
-imagesc(y_axis, x_axis, b_mode_fund);
 colormap(gray);
-axis image;
-xlabel('Horizontal Position [mm]');
-ylabel('Depth [mm]');
-title('Harmonic Image');
 
 scaleFig(2, 1);
+%%
+% save images
+% normalised to maximum value 
+name = strcat(datestr(datetime('now'),'mmdd'), '_', ...
+        beam_type, '_', phantom, '.tif');
+imwrite(b_mode_fund/max(b_mode_fund, [], 'all'), name)
