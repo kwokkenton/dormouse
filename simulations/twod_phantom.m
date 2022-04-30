@@ -21,7 +21,7 @@ DATA_CAST = 'single';
 % =========================================================================
 % SET SIMULATION CASE
 % =========================================================================
-beam_type = 'focusana';
+beam_type = 'focus';
 phantom = 'spheres';
 r = 50e-3;          % radius of the steer [m]
 
@@ -247,7 +247,21 @@ end
 medium.sound_speed = sound_speed_map;
 medium.density = density_map;
 
+%% Visualise medium
+figure;
 
+% create the axis variables
+x_axis = [0, Nx * dx * 1e3];    % [mm]
+y_axis = [0, Ny * dy * 1e3];    % [mm]
+
+imagesc(y_axis, x_axis, medium.sound_speed(:, :, end));
+axis image;
+xlabel('Horizontal Position [mm]');
+ylabel('Depth [mm]');
+title('Scattering Phantom');
+colormap(gray);
+
+%%
 % =========================================================================
 % DETECTION
 % =========================================================================
@@ -365,7 +379,7 @@ scan_lines = backup;
 % trim the delay offset from the scan line data
 % value 1.4 to register the image (need to fix)
 factor = 1.4;
-%factor = 1;
+factor = 1;
 t0_offset = round(length(source.p) *factor);
 scan_lines = scan_lines(:, t0_offset:end);
 
