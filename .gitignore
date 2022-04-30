@@ -1,0 +1,6 @@
+k-Wave/
+.DS_Store
+raw_data/
+processed_data/
+*.asv
+*.mat
